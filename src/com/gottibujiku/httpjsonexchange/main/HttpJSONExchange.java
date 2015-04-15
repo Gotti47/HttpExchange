@@ -3,6 +3,7 @@ package com.gottibujiku.httpjsonexchange.main;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -47,7 +48,6 @@ public class HttpJSONExchange {
 	 * @return a JSON object containing the response             
 	 */
 
-
 	public JSONObject sendGETRequest(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
 		
 		/* 1. Form the query string by concatenating param names and their values
@@ -83,6 +83,60 @@ public class HttpJSONExchange {
 			
 		return jsonResponse;
 		
+		
+	}
+	
+	/**
+	 * This method sends a POST request to the server. 
+	 * 
+	 * @param fullDomainName a fully qualified domain name including the protocol
+	 * @param queryParams    parameters to be sent in the query string
+	 * @param headers        additional headers
+	 * @return a JSON object containing the response             
+	 */
+	public JSONObject sendPOSTRequest(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
+		
+		/* 1. Form the query string by concatenating param names and their values
+		 * 2. Add HTTP headers to the request and set request method to POST, open output stream and write the query string
+		 * 3. Open input stream and read server response
+		 * 
+		 */
+		JSONObject jsonResponse = null;
+		URL url = null;//a url object to hold a complete URL
+		try {
+			url = new URL(fullDomainName);//a complete URL 
+			String queryString = getFormatedQueryString(queryParams);
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection = addHeadersToRequest(headers, connection);//add headers to connection and get modified instance
+			connection.setDoOutput(true);//enables writing over the open connection
+			connection.setRequestProperty("Accept-Charset", UTF_CHARSET);//accept the given encoding
+			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset="+UTF_CHARSET);
+			//a call to connection.connect() is superfluous since connect will be called
+			//implicitly when the stream is opened
+			connection.setRequestMethod("POST");
+			//open the connection and send the query string in the request body
+			try(PrintWriter writer = new PrintWriter(connection.getOutputStream(),true)){
+				writer.print(queryString);//send the query string in the request body
+			}	
+			String jsonString = getServerResponse(connection);
+			connection.disconnect();
+			jsonResponse = new JSONObject(jsonString);//change the response into a json object		
+			
+			
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+			return null;//return if the URL is malformed
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;//if failed to open a connection
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return null;//invalid JSON response
+		}
+			
+		return jsonResponse;
+		
+		
 	}
 
 	/**
@@ -100,8 +154,7 @@ public class HttpJSONExchange {
 			for(String key : keys){
 				connection.setRequestProperty(key, headers.get(key));
 			}
-		}
-		
+		}		
 		return connection;
 	}
 	
@@ -162,22 +215,7 @@ public class HttpJSONExchange {
 		return stringBuilder.toString();
 	}
 	
-	
-	public JSONObject sendPOSTRequest(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
-		
-		/* 1. Form the query string by concatenating param names and their values
-		 * 2. Add HTTP headers to the request and set request method to GET, open output stream and write the query string
-		 * 3. Open stream and read server response
-		 * 
-		 */
-		JSONObject jsonResponse = null;
-		URL url = null;//a url object to hold a complete URL
-		Set<String> keys = null;
 
-		StringBuilder stringBuilder = new StringBuilder();//avoid strings,they are immutable
-		
-		
-	}
 
 
 
