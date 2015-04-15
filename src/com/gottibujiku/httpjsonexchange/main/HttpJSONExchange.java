@@ -30,26 +30,31 @@ public class HttpJSONExchange {
 	private static final char PARAM_SEPARATOR ='&';//used to separate the parameters in the query string
 	private static final char QUERY_SEPARATOR ='?';//used to separate the domain and the query string
 	private static final String UTF_CHARSET = "UTF-8";
+	private String fullDomainName;
+	private HashMap<String, String> queryParams;
+	private HashMap<String, String> headers;
 
 	public HttpJSONExchange(){
 
 	}
-	
+
+	public HttpJSONExchange(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
+		this.fullDomainName = fullDomainName;
+		this.queryParams = queryParams;
+		this.headers = headers;
+	}
+
+
 	/**
 	 * This method sends a GET request to the server.
 	 * It prepares the request by creating a valid URL with a query string(if any)
 	 * then adds the headers and then open a connection to the server; retrieves
 	 * response and return result as a JSON Object
 	 * 
-	 * 
-	 * @param fullDomainName a fully qualified domain name including the protocol
-	 * @param queryParams    parameters to be sent in the query string
-	 * @param headers        additional headers
 	 * @return a JSON object containing the response             
 	 */
+	public JSONObject sendGETRequest(){
 
-	public JSONObject sendGETRequest(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
-		
 		/* 1. Form the query string by concatenating param names and their values
 		 * 2. Add HTTP headers to the request and set request method to GET
 		 * 3. Open stream and read server response
@@ -68,8 +73,8 @@ public class HttpJSONExchange {
 			String jsonString = getServerResponse(connection);
 			connection.disconnect();
 			jsonResponse = new JSONObject(jsonString);//change the response into a json object		
-			
-			
+
+
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 			return null;//return if the URL is malformed
@@ -80,12 +85,64 @@ public class HttpJSONExchange {
 			e.printStackTrace();
 			return null;//invalid JSON response
 		}
-			
+
 		return jsonResponse;
-		
-		
+
+
 	}
-	
+
+
+	/**
+	 * This method sends a GET request to the server.
+	 * It prepares the request by creating a valid URL with a query string(if any)
+	 * then adds the headers and then open a connection to the server; retrieves
+	 * response and return result as a JSON Object
+	 * 
+	 * 
+	 * @param fullDomainName a fully qualified domain name including the protocol
+	 * @param queryParams    parameters to be sent in the query string
+	 * @param headers        additional headers
+	 * @return a JSON object containing the response             
+	 */
+
+	public JSONObject sendGETRequest(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
+
+		/* 1. Form the query string by concatenating param names and their values
+		 * 2. Add HTTP headers to the request and set request method to GET
+		 * 3. Open stream and read server response
+		 * 
+		 */
+		JSONObject jsonResponse = null;
+		URL url = null;//a url object to hold a complete URL
+		try {
+			url = new URL(fullDomainName + QUERY_SEPARATOR + getFormatedQueryString(queryParams));//a complete URL 
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection = addHeadersToRequest(headers, connection);//add headers to connection and get modified instance
+			connection.setRequestProperty("Accept-Charset", UTF_CHARSET);//accept the given encoding
+			//a call to connection.connect() is superfluous since connect will be called
+			//implicitly when the stream is opened
+			connection.setRequestMethod("GET");
+			String jsonString = getServerResponse(connection);
+			connection.disconnect();
+			jsonResponse = new JSONObject(jsonString);//change the response into a json object		
+
+
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+			return null;//return if the URL is malformed
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;//if failed to open a connection
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return null;//invalid JSON response
+		}
+
+		return jsonResponse;
+
+
+	}
+
 	/**
 	 * This method sends a POST request to the server. 
 	 * 
@@ -95,7 +152,7 @@ public class HttpJSONExchange {
 	 * @return a JSON object containing the response             
 	 */
 	public JSONObject sendPOSTRequest(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
-		
+
 		/* 1. Form the query string by concatenating param names and their values
 		 * 2. Add HTTP headers to the request and set request method to POST, open output stream and write the query string
 		 * 3. Open input stream and read server response
@@ -121,8 +178,8 @@ public class HttpJSONExchange {
 			String jsonString = getServerResponse(connection);
 			connection.disconnect();
 			jsonResponse = new JSONObject(jsonString);//change the response into a json object		
-			
-			
+
+
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 			return null;//return if the URL is malformed
@@ -133,12 +190,62 @@ public class HttpJSONExchange {
 			e.printStackTrace();
 			return null;//invalid JSON response
 		}
-			
+
 		return jsonResponse;
-		
-		
+
+
 	}
 
+	
+	/**
+	 * This method sends a POST request to the server. 
+	 * 
+	 * @return a JSON object containing the response             
+	 */
+	public JSONObject sendPOSTRequest(){
+
+		/* 1. Form the query string by concatenating param names and their values
+		 * 2. Add HTTP headers to the request and set request method to POST, open output stream and write the query string
+		 * 3. Open input stream and read server response
+		 * 
+		 */
+		JSONObject jsonResponse = null;
+		URL url = null;//a url object to hold a complete URL
+		try {
+			url = new URL(fullDomainName);//a complete URL 
+			String queryString = getFormatedQueryString(queryParams);
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection = addHeadersToRequest(headers, connection);//add headers to connection and get modified instance
+			connection.setDoOutput(true);//enables writing over the open connection
+			connection.setRequestProperty("Accept-Charset", UTF_CHARSET);//accept the given encoding
+			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset="+UTF_CHARSET);
+			//a call to connection.connect() is superfluous since connect will be called
+			//implicitly when the stream is opened
+			connection.setRequestMethod("POST");
+			//open the connection and send the query string in the request body
+			try(PrintWriter writer = new PrintWriter(connection.getOutputStream(),true)){
+				writer.print(queryString);//send the query string in the request body
+			}	
+			String jsonString = getServerResponse(connection);
+			connection.disconnect();
+			jsonResponse = new JSONObject(jsonString);//change the response into a json object		
+
+
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+			return null;//return if the URL is malformed
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;//if failed to open a connection
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return null;//invalid JSON response
+		}
+
+		return jsonResponse;
+
+
+	}
 	/**
 	 * Adds additional headers to the HTTP Request
 	 * 
@@ -157,7 +264,7 @@ public class HttpJSONExchange {
 		}		
 		return connection;
 	}
-	
+
 	/**
 	 * Connects to the server and retrieves the response as a JSON String
 	 * @param connection A connection object used to connect to the server
@@ -176,7 +283,7 @@ public class HttpJSONExchange {
 
 				}
 			}
-			
+
 		}
 		return stringBuilder.toString();//return a JSON string from the server
 	}
@@ -193,7 +300,7 @@ public class HttpJSONExchange {
 			Set<String> keys;
 			//Loop around the map to form a complete query string
 			//Do encoding to escape special characters
-			 keys = queryParams.keySet();//holds all keys in the map
+			keys = queryParams.keySet();//holds all keys in the map
 			String value = null;
 			for(String key : keys){
 				value = queryParams.get(key);//retrieve parameter value
@@ -214,12 +321,30 @@ public class HttpJSONExchange {
 		}
 		return stringBuilder.toString();
 	}
-	
 
+	public String getFullDomainName() {
+		return fullDomainName;
+	}
 
+	public void setFullDomainName(String fullDomainName) {
+		this.fullDomainName = fullDomainName;
+	}
 
+	public HashMap<String, String> getQueryParams() {
+		return queryParams;
+	}
 
+	public void setQueryParams(HashMap<String, String> queryParams) {
+		this.queryParams = queryParams;
+	}
 
+	public HashMap<String, String> getHeaders() {
+		return headers;
+	}
+
+	public void setHeaders(HashMap<String, String> headers) {
+		this.headers = headers;
+	}
 
 
 }
