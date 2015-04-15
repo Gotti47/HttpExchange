@@ -57,10 +57,87 @@ public class HttpJSONExchange {
 		 */
 		JSONObject jsonResponse = null;
 		URL url = null;//a url object to hold a complete URL
-		Set<String> keys = null;
+		try {
+			url = new URL(fullDomainName + QUERY_SEPARATOR + getFormatedQueryString(queryParams));//a complete URL 
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection = addHeadersToRequest(headers, connection);//add headers to connection and get modified instance
+			connection.setRequestProperty("Accept-Charset", UTF_CHARSET);//accept the given encoding
+			//a call to connection.connect() is superfluous since connect will be called
+			//implicitly when the stream is opened
+			connection.setRequestMethod("GET");
+			String jsonString = getServerResponse(connection);
+			connection.disconnect();
+			jsonResponse = new JSONObject(jsonString);//change the response into a json object		
+			
+			
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+			return null;//return if the URL is malformed
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;//if failed to open a connection
+		} catch (JSONException e) {
+			e.printStackTrace();
+			return null;//invalid JSON response
+		}
+			
+		return jsonResponse;
+		
+	}
 
-		StringBuilder stringBuilder = new StringBuilder();//avoid strings,they are immutable
+	/**
+	 * Adds additional headers to the HTTP Request
+	 * 
+	 * @param headers A Hashmap of name and value headers
+	 * @param connection A connection object used to connect to the server
+	 * @return Modified connection object with additional headers(if there were any)
+	 */
+	private HttpURLConnection addHeadersToRequest(HashMap<String, String> headers, HttpURLConnection connection) {
+		Set<String> keys;
+		if(headers != null){//check if there were any additional headers
+			keys = headers.keySet();//get headers' keys
+			//set the headers as request properties
+			for(String key : keys){
+				connection.setRequestProperty(key, headers.get(key));
+			}
+		}
+		
+		return connection;
+	}
+	
+	/**
+	 * Connects to the server and retrieves the response as a JSON String
+	 * @param connection A connection object used to connect to the server
+	 * @return a JSON formatted String from the server
+	 * @throws IOException if could not read from the stream
+	 */
+	private String getServerResponse(HttpURLConnection connection)throws IOException {
+		String line;
+		StringBuilder stringBuilder = new StringBuilder();
+		try(BufferedReader reader =new BufferedReader(new InputStreamReader(connection.getInputStream()))){//open with resources
+			//open a stream to read the response) if all was OK
+			if( connection.getResponseCode() == HttpURLConnection.HTTP_OK){
+				while((line = reader.readLine()) != null){
+					//if  the response from the server is not null
+					stringBuilder.append(line);
+
+				}
+			}
+			
+		}
+		return stringBuilder.toString();//return a JSON string from the server
+	}
+
+	/**
+	 * Formats the provided query parameters into a query string
+	 * 
+	 * @param queryParams A HashMap of the parameter names and values
+	 * @return a formatted and encoded query string
+	 */
+	private String getFormatedQueryString(HashMap<String, String> queryParams) {
+		StringBuilder stringBuilder = new StringBuilder();//avoid strings when looping,they are immutable
 		if(queryParams != null){//do this if there were parameters given
+			Set<String> keys;
 			//Loop around the map to form a complete query string
 			//Do encoding to escape special characters
 			 keys = queryParams.keySet();//holds all keys in the map
@@ -82,51 +159,23 @@ public class HttpJSONExchange {
 
 			}
 		}
+		return stringBuilder.toString();
+	}
+	
+	
+	public JSONObject sendPOSTRequest(String fullDomainName, HashMap<String, String> queryParams, HashMap<String, String> headers){
 		
-		
-		try {
-			url = new URL(fullDomainName + QUERY_SEPARATOR + stringBuilder.toString());//a complete URL 
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-			if(headers != null){//check if there were any additional headers
-				keys = headers.keySet();//get headers' keys
-				//set the headers as request properties
-				for(String key : keys){
-					connection.setRequestProperty(key, headers.get(key));
-				}
-			}
-			connection.setRequestProperty("Accept-Charset", UTF_CHARSET);//accept the given encoding
-			//a call to connection.connect() is superfluous since connect will be called
-			//implicitly when the stream is opened
-			connection.setRequestMethod("GET");
-			String line = null;
-			stringBuilder = new StringBuilder();
-			try(BufferedReader reader =new BufferedReader(new InputStreamReader(connection.getInputStream()))){//open with resources
-				//open a stream to read the response) if all was OK
-				if( connection.getResponseCode() == HttpURLConnection.HTTP_OK){
-					while((line = reader.readLine()) != null){
-						//if  the response from the server is not null
-						stringBuilder.append(line);
+		/* 1. Form the query string by concatenating param names and their values
+		 * 2. Add HTTP headers to the request and set request method to GET, open output stream and write the query string
+		 * 3. Open stream and read server response
+		 * 
+		 */
+		JSONObject jsonResponse = null;
+		URL url = null;//a url object to hold a complete URL
+		Set<String> keys = null;
 
-					}
-				}
-				
-			}
-			connection.disconnect();
-			jsonResponse = new JSONObject(stringBuilder.toString());//change the response into a json object		
-			
-			
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-			return null;//return if the URL is malformed
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;//if failed to open a connection
-		} catch (JSONException e) {
-			e.printStackTrace();
-			return null;//invalid JSON response
-		}
-			
-		return jsonResponse;
+		StringBuilder stringBuilder = new StringBuilder();//avoid strings,they are immutable
+		
 		
 	}
 
