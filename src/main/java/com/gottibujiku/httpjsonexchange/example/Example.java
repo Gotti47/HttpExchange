@@ -1,6 +1,7 @@
 package com.gottibujiku.httpjsonexchange.example;
 
 import com.gottibujiku.httpjsonexchange.main.HttpJSONExchange;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
@@ -33,13 +34,15 @@ public class Example {
         //passing a complete URL as a String including a scheme(http/https) and a domain name
         //pass the parameters map as a second argument and null if there are no additional request headers
         JSONObject jsonResponse = httpExchange.sendGETRequest(
-               null, //"http://api.openweathermap.org/data/2.5/weather",
+               "http://api.openweathermap.org/data/2.5/weather",
                 parameters,
                 null
         );
 
         //4.Do something with the result such as pulling off info from the returned JSON object
-        System.out.println(jsonResponse.toString());
+
+            System.out.println(jsonResponse.toString());
+
 
 
     }
